@@ -13,7 +13,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push('/admin/login');
+      router.push('/login');
     }
   }, [isAuthenticated, isLoading, router]);
 
