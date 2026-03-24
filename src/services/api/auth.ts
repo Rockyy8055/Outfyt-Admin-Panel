@@ -1,5 +1,6 @@
 import api from './config';
 import type { AuthResponse, LoginCredentials, Admin } from '@/types';
+import { createClient } from '@/lib/supabase/client';
 
 function setCookie(name: string, value: string, days: number = 7) {
   if (typeof document === 'undefined') return;
@@ -14,20 +15,46 @@ function deleteCookie(name: string) {
 
 export const authApi = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
-    const response = await api.post('/auth/admin/login', credentials);
-    const data = response.data;
-    // Store token in localStorage and cookie
-    // Backend returns 'accessToken', frontend uses 'token'
-    const token = data.accessToken || data.token;
-    if (typeof window !== 'undefined' && token) {
+    const supabase = createClient();
+    
+    // Sign in with Supabase Auth
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: credentials.email,
+      password: credentials.password,
+    });
+
+    if (error) throw new Error(error.message);
+    if (!data.session) throw new Error('Login failed - no session');
+
+    const token = data.session.access_token;
+    
+    // Store Supabase token in localStorage and cookie
+    if (typeof window !== 'undefined') {
       localStorage.setItem('admin_token', token);
-      localStorage.setItem('admin_user', JSON.stringify(data.admin));
       setCookie('admin_token', token);
     }
-    return { ...data, token };
+
+    // Fetch admin profile from backend
+    try {
+      const profile = await authApi.getProfile();
+      localStorage.setItem('admin_user', JSON.stringify(profile));
+      return { token, admin: profile };
+    } catch (err) {
+      // If profile fetch fails, still return with basic info
+      const admin: Admin = {
+        id: data.user?.id || '',
+        email: credentials.email,
+        name: data.user?.user_metadata?.name || credentials.email.split('@')[0],
+        role: 'admin',
+      };
+      localStorage.setItem('admin_user', JSON.stringify(admin));
+      return { token, admin };
+    }
   },
 
   logout: async (): Promise<void> => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
     if (typeof window !== 'undefined') {
       localStorage.removeItem('admin_token');
       localStorage.removeItem('admin_user');
@@ -36,7 +63,7 @@ export const authApi = {
   },
 
   getProfile: async (): Promise<Admin> => {
-    const response = await api.get('/auth/admin/profile');
+    const response = await api.get('/auth/me');
     return response.data;
   },
 
@@ -46,20 +73,47 @@ export const authApi = {
   },
 
   changePassword: async (data: { currentPassword: string; newPassword: string }): Promise<void> => {
-    await api.post('/auth/admin/change-password', data);
+    const supabase = createClient();
+    const { error } = await supabase.auth.updateUser({ password: data.newPassword });
+    if (error) throw new Error(error.message);
   },
 
   forgotPassword: async (email: string): Promise<void> => {
-    await api.post('/auth/admin/forgot-password', { email });
+    const supabase = createClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    if (error) throw new Error(error.message);
   },
 
   resetPassword: async (token: string, password: string): Promise<void> => {
-    await api.post('/auth/admin/reset-password', { token, password });
+    const supabase = createClient();
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) throw new Error(error.message);
   },
 
   signup: async (data: { email: string; password: string; name: string }): Promise<AuthResponse> => {
-    const response = await api.post('/auth/admin/signup', data);
-    return response.data;
+    const supabase = createClient();
+    const { data: result, error } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
+      options: { data: { name: data.name } },
+    });
+    if (error) throw new Error(error.message);
+    if (!result.session) throw new Error('Signup successful - please verify email');
+    
+    const token = result.session.access_token;
+    localStorage.setItem('admin_token', token);
+    setCookie('admin_token', token);
+    
+    return { 
+      token, 
+      admin: { id: result.user?.id || '', email: data.email, name: data.name, role: 'admin' } 
+    };
+  },
+
+  getSession: async () => {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    return session;
   },
 };
 

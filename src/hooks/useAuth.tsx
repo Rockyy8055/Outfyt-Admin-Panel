@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import { useRouter } from 'next/navigation';
 import type { Admin, LoginCredentials } from '@/types';
 import { authApi } from '@/services/api/auth';
+import { createClient } from '@/lib/supabase/client';
 
 interface AuthContextType {
   admin: Admin | null;
@@ -20,47 +21,74 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [admin, setAdmin] = useState<Admin | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const supabase = createClient();
 
   const checkAuth = useCallback(async () => {
     try {
-      if (typeof window === 'undefined') {
-        setIsLoading(false);
-        return;
-      }
-
-      const token = localStorage.getItem('admin_token');
-      const storedUser = localStorage.getItem('admin_user');
-
-      if (!token) {
+      // Get Supabase session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
         setAdmin(null);
         setIsLoading(false);
         return;
       }
 
-      // Use stored user data first for quick load
+      // Store token in localStorage for API calls
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('admin_token', session.access_token);
+      }
+
+      // Get stored user or fetch from backend
+      const storedUser = localStorage.getItem('admin_user');
       if (storedUser) {
         setAdmin(JSON.parse(storedUser));
       }
 
-      // Verify token by fetching profile
-      const profile = await authApi.getProfile();
-      setAdmin(profile);
-      localStorage.setItem('admin_user', JSON.stringify(profile));
-    } catch {
-      // Token invalid, clear storage
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('admin_token');
-        localStorage.removeItem('admin_user');
+      // Verify session is valid
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const adminData: Admin = {
+          id: user.id,
+          email: user.email || '',
+          name: user.user_metadata?.name || user.email?.split('@')[0] || 'Admin',
+          role: 'admin',
+        };
+        setAdmin(adminData);
+        localStorage.setItem('admin_user', JSON.stringify(adminData));
       }
+    } catch {
       setAdmin(null);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [supabase.auth]);
 
   useEffect(() => {
     checkAuth();
-  }, [checkAuth]);
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_OUT' || !session) {
+          setAdmin(null);
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('admin_token');
+            localStorage.removeItem('admin_user');
+          }
+        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          if (session) {
+            localStorage.setItem('admin_token', session.access_token);
+            checkAuth();
+          }
+        }
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [checkAuth, supabase.auth]);
 
   const login = useCallback(async (credentials: LoginCredentials) => {
     const response = await authApi.login(credentials);
@@ -72,24 +100,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await authApi.logout();
     } catch {
-      // Ignore logout API errors
+      // Ignore logout errors
     } finally {
       setAdmin(null);
-      router.push('/admin/login');
+      router.push('/login');
     }
   }, [router]);
 
   const refreshProfile = useCallback(async () => {
-    try {
-      const profile = await authApi.getProfile();
-      setAdmin(profile);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('admin_user', JSON.stringify(profile));
-      }
-    } catch {
-      // Ignore refresh errors
-    }
-  }, []);
+    await checkAuth();
+  }, [checkAuth]);
 
   return (
     <AuthContext.Provider
