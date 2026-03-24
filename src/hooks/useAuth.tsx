@@ -21,78 +21,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [admin, setAdmin] = useState<Admin | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-  const supabase = createClient();
 
   const checkAuth = useCallback(async () => {
     try {
+      const supabase = createClient();
+      
       // Get Supabase session
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
+        console.log('[useAuth] No session found');
         setAdmin(null);
-        setIsLoading(false);
         return;
       }
+
+      console.log('[useAuth] Session found for:', session.user?.email);
 
       // Store token in localStorage for API calls
       if (typeof window !== 'undefined') {
         localStorage.setItem('admin_token', session.access_token);
       }
 
-      // Get stored user or fetch from backend
-      const storedUser = localStorage.getItem('admin_user');
-      if (storedUser) {
-        setAdmin(JSON.parse(storedUser));
-      }
-
-      // Verify session is valid
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const adminData: Admin = {
-          id: user.id,
-          email: user.email || '',
-          name: user.user_metadata?.name || user.email?.split('@')[0] || 'Admin',
-          role: 'admin',
-        };
-        setAdmin(adminData);
-        localStorage.setItem('admin_user', JSON.stringify(adminData));
-      }
-    } catch {
+      // Use user data from Supabase session
+      const adminData: Admin = {
+        id: session.user?.id || '',
+        email: session.user?.email || '',
+        name: session.user?.user_metadata?.name || session.user?.email?.split('@')[0] || 'Admin',
+        role: 'admin',
+      };
+      
+      setAdmin(adminData);
+      localStorage.setItem('admin_user', JSON.stringify(adminData));
+      console.log('[useAuth] Admin set:', adminData.email);
+    } catch (error) {
+      console.error('[useAuth] Error:', error);
       setAdmin(null);
-    } finally {
-      setIsLoading(false);
     }
-  }, [supabase.auth]);
+  }, []);
 
   useEffect(() => {
-    checkAuth();
-
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_OUT' || !session) {
-          setAdmin(null);
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('admin_token');
-            localStorage.removeItem('admin_user');
-          }
-        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          if (session) {
-            localStorage.setItem('admin_token', session.access_token);
-            checkAuth();
-          }
-        }
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [checkAuth, supabase.auth]);
+    checkAuth().finally(() => setIsLoading(false));
+  }, [checkAuth]);
 
   const login = useCallback(async (credentials: LoginCredentials) => {
+    console.log('[useAuth] Login called for:', credentials.email);
     const response = await authApi.login(credentials);
+    console.log('[useAuth] Login response:', response);
     setAdmin(response.admin);
+    setIsLoading(false);
     router.push('/admin');
   }, [router]);
 

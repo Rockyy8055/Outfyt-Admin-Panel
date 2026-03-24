@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth, AuthProvider } from '@/hooks/useAuth';
 import { Sidebar } from './Sidebar';
@@ -8,16 +8,26 @@ import { Topbar } from './Topbar';
 import { Loader2 } from 'lucide-react';
 
 function AdminLayoutContent({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, admin } = useAuth();
   const router = useRouter();
+  const [hasChecked, setHasChecked] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    // Wait for loading to complete before checking auth
+    if (!isLoading) {
+      setHasChecked(true);
+    }
+  }, [isLoading]);
+
+  useEffect(() => {
+    // Only redirect after we've confirmed auth state
+    if (hasChecked && !isAuthenticated) {
+      console.log('[AdminLayout] Not authenticated, redirecting to login');
       router.push('/login');
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [hasChecked, isAuthenticated, router]);
 
-  if (isLoading) {
+  if (isLoading || !hasChecked) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
@@ -26,8 +36,14 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   }
 
   if (!isAuthenticated) {
-    return null;
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    );
   }
+
+  console.log('[AdminLayout] Authenticated, showing dashboard for:', admin?.email);
 
   return (
     <div className="min-h-screen bg-gray-50">
