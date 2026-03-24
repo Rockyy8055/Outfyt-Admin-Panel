@@ -27,20 +27,11 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Don't auto-logout on 401 - let the calling code handle it
-    // Only clear storage if we're not in the middle of login
+    // Don't auto-logout on 401 - just let the page handle it
+    // The useAuth hook will check localStorage for token
     if (error.response?.status === 401) {
-      const isLoginRequest = error.config?.url?.includes('/auth/') || 
-                            error.config?.url?.includes('signInWithPassword');
-      if (!isLoginRequest && typeof window !== 'undefined') {
-        // Only clear if not a login-related request
-        const currentPath = window.location.pathname;
-        if (currentPath.startsWith('/admin') && currentPath !== '/login') {
-          localStorage.removeItem('admin_token');
-          localStorage.removeItem('admin_user');
-          window.location.href = '/login';
-        }
-      }
+      console.log('[API] 401 error on:', error.config?.url);
+      // Don't auto-logout - let the user stay on the page
     }
     return Promise.reject(error);
   }
