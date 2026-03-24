@@ -18,7 +18,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { ticketsApi } from '@/services/api';
-import type { Ticket, TicketMessage } from '@/types';
+import type { Ticket, TicketReply } from '@/types';
 import {
   ArrowLeft,
   User,
@@ -111,7 +111,7 @@ export default function TicketDetailPage({ params }: PageProps) {
         if (!prev) return prev;
         return {
           ...prev,
-          conversation: [...prev.conversation, message],
+          replies: [...(prev.replies || []), message],
         };
       });
       setReplyMessage('');
@@ -184,13 +184,13 @@ export default function TicketDetailPage({ params }: PageProps) {
             Back
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Ticket #{ticket.ticketNumber}</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Ticket #{ticket.id.slice(0, 8)}...</h1>
             <p className="text-gray-500">
               Created {format(new Date(ticket.createdAt), 'PPP at p')}
             </p>
           </div>
         </div>
-        {ticket.status !== 'resolved' && ticket.status !== 'closed' && (
+        {ticket.status !== 'RESOLVED' && ticket.status !== 'CLOSED' && (
           <Button onClick={handleResolve} disabled={isSending}>
             <CheckCircle className="mr-2 h-4 w-4" />
             Resolve
@@ -211,31 +211,31 @@ export default function TicketDetailPage({ params }: PageProps) {
             <CardContent className="flex-1 flex flex-col">
               <ScrollArea className="flex-1 -mx-6 px-6">
                 <div className="space-y-4">
-                  {ticket.conversation.map((message) => (
+                  {ticket.replies?.map((message) => (
                     <div
                       key={message.id}
                       className={`flex gap-3 ${
-                        message.senderRole === 'admin' ? 'flex-row-reverse' : ''
+                        message.user?.role === 'admin' ? 'flex-row-reverse' : ''
                       }`}
                     >
                       <Avatar className="h-8 w-8 flex-shrink-0">
                         <AvatarImage src={undefined} />
-                        <AvatarFallback className={message.senderRole === 'admin' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}>
-                          {getInitials(message.senderName)}
+                        <AvatarFallback className={message.user?.role === 'admin' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}>
+                          {getInitials(message.user?.name || 'User')}
                         </AvatarFallback>
                       </Avatar>
-                      <div className={`max-w-[70%] ${message.senderRole === 'admin' ? 'text-right' : ''}`}>
+                      <div className={`max-w-[70%] ${message.user?.role === 'admin' ? 'text-right' : ''}`}>
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-sm font-medium">{message.senderName}</span>
+                          <span className="text-sm font-medium">{message.user?.name || 'User'}</span>
                           <span className="text-xs text-gray-400">
-                            {format(new Date(message.timestamp), 'p')}
+                            {format(new Date(message.createdAt), 'p')}
                           </span>
                         </div>
                         <div
                           className={`rounded-lg px-4 py-2 ${
-                            message.senderRole === 'admin'
+                            message.user?.role === 'admin'
                               ? 'bg-blue-600 text-white'
-                              : message.senderRole === 'system'
+                              : message.isInternal
                               ? 'bg-gray-100 text-gray-600'
                               : 'bg-gray-100 text-gray-900'
                           }`}
@@ -248,7 +248,7 @@ export default function TicketDetailPage({ params }: PageProps) {
                 </div>
               </ScrollArea>
 
-              {ticket.status !== 'resolved' && ticket.status !== 'closed' && (
+              {ticket.status !== 'RESOLVED' && ticket.status !== 'CLOSED' && (
                 <>
                   <Separator className="my-4" />
                   <div className="flex gap-3">
@@ -306,7 +306,7 @@ export default function TicketDetailPage({ params }: PageProps) {
                 </div>
               </div>
 
-              {ticket.status !== 'resolved' && ticket.status !== 'closed' && (
+              {ticket.status !== 'RESOLVED' && ticket.status !== 'CLOSED' && (
                 <div className="space-y-2">
                   <Label>Update Priority</Label>
                   <div className="flex gap-2">
@@ -339,8 +339,8 @@ export default function TicketDetailPage({ params }: PageProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="font-medium">{ticket.userName}</p>
-              <p className="text-sm text-gray-500">{ticket.userEmail}</p>
+              <p className="font-medium">{ticket.user?.name || 'N/A'}</p>
+              <p className="text-sm text-gray-500">{ticket.user?.email || ticket.user?.phone || 'N/A'}</p>
             </CardContent>
           </Card>
 
@@ -358,7 +358,7 @@ export default function TicketDetailPage({ params }: PageProps) {
                   href={`/admin/orders/${ticket.orderId}`}
                   className="text-blue-600 hover:underline"
                 >
-                  Order #{ticket.orderNumber}
+                  Order #{ticket.orderId.slice(0, 8)}
                 </Link>
               </CardContent>
             </Card>
@@ -371,7 +371,7 @@ export default function TicketDetailPage({ params }: PageProps) {
                 <CardTitle>Assigned To</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="font-medium">{ticket.assignedToName}</p>
+                <p className="font-medium">{ticket.assignee?.name || 'N/A'}</p>
               </CardContent>
             </Card>
           )}

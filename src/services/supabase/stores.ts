@@ -5,7 +5,8 @@ interface StoreFilters {
   page?: number;
   limit?: number;
   search?: string;
-  status?: Store['status'];
+  isApproved?: boolean;
+  isDisabled?: boolean;
 }
 
 interface ProductFilters {
@@ -21,8 +22,11 @@ export const storesApi = {
       .from('stores')
       .select('*', { count: 'exact' });
 
-    if (filters?.status) {
-      query = query.eq('status', filters.status);
+    if (filters?.isApproved !== undefined) {
+      query = query.eq('isApproved', filters.isApproved);
+    }
+    if (filters?.isDisabled !== undefined) {
+      query = query.eq('isDisabled', filters.isDisabled);
     }
     if (filters?.search) {
       query = query.or(`name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`);

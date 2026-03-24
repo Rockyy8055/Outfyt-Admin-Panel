@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client';
-import type { Ticket, TicketMessage, PaginatedResponse } from '@/types';
+import type { Ticket, TicketReply, PaginatedResponse } from '@/types';
 
 interface TicketFilters {
   page?: number;
@@ -103,7 +103,7 @@ export const ticketsApi = {
     return data as Ticket;
   },
 
-  async reply(id: string, message: string, senderName: string): Promise<TicketMessage> {
+  async reply(id: string, message: string, senderName: string): Promise<TicketReply> {
     const supabase = createClient();
     
     const { data, error } = await supabase
@@ -122,11 +122,11 @@ export const ticketsApi = {
     // Update ticket status if it was open
     await supabase
       .from('tickets')
-      .update({ status: 'in_progress' })
+      .update({ status: 'IN_PROGRESS' })
       .eq('id', id)
-      .eq('status', 'open');
+      .eq('status', 'OPEN');
 
-    return data as TicketMessage;
+    return data as TicketReply;
   },
 
   async resolve(id: string, resolution: string): Promise<Ticket> {
@@ -135,7 +135,7 @@ export const ticketsApi = {
     const { data, error } = await supabase
       .from('tickets')
       .update({
-        status: 'resolved',
+        status: 'RESOLVED',
         resolution,
         resolved_at: new Date().toISOString(),
       })
@@ -163,7 +163,7 @@ export const ticketsApi = {
     
     const { data, error } = await supabase
       .from('tickets')
-      .update({ status: 'closed' })
+      .update({ status: 'CLOSED' })
       .eq('id', id)
       .select()
       .single();
@@ -178,7 +178,7 @@ export const ticketsApi = {
     
     const { data, error } = await supabase
       .from('tickets')
-      .update({ status: 'open', resolution: null, resolved_at: null })
+      .update({ status: 'OPEN', resolution: null, resolved_at: null })
       .eq('id', id)
       .select()
       .single();

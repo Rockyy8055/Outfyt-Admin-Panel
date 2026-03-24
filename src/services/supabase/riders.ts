@@ -5,7 +5,7 @@ interface RiderFilters {
   page?: number;
   limit?: number;
   search?: string;
-  status?: Rider['status'];
+  isBlocked?: boolean;
 }
 
 export const ridersApi = {
@@ -16,8 +16,8 @@ export const ridersApi = {
       .from('riders')
       .select('*', { count: 'exact' });
 
-    if (filters?.status) {
-      query = query.eq('status', filters.status);
+    if (filters?.isBlocked !== undefined) {
+      query = query.eq('isBlocked', filters.isBlocked);
     }
     if (filters?.search) {
       query = query.or(`name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,phone.ilike.%${filters.search}%`);

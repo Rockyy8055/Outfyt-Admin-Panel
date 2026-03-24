@@ -2,7 +2,6 @@ import api from './config';
 import type { Rider, PaginatedResponse, PaginationParams } from '@/types';
 
 export interface RidersQueryParams extends PaginationParams {
-  status?: Rider['status'];
   isBlocked?: boolean;
 }
 
@@ -31,6 +30,11 @@ export const ridersApi = {
 
   suspend: async (id: string, reason: string): Promise<Rider> => {
     const response = await api.put(`/admin/riders/${id}/suspend`, { reason });
+    return response.data.data;
+  },
+
+  activate: async (id: string): Promise<Rider> => {
+    const response = await api.put(`/admin/riders/${id}/approve`);
     return response.data.data;
   },
 

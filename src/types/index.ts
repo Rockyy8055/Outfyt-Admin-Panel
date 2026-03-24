@@ -236,7 +236,7 @@ export interface TicketFilters {
   page?: number;
   limit?: number;
   search?: string;
-  status?: 'open' | 'in_progress' | 'resolved' | 'closed';
+  status?: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
   type?: Ticket['type'];
   priority?: Ticket['priority'];
 }

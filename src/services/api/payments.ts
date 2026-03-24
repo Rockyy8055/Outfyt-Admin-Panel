@@ -25,6 +25,10 @@ export const paymentsApi = {
     const response = await api.get('/admin/transactions', { params: { orderId } });
     return response.data.data || [];
   },
+
+  refund: async (paymentId: string, reason?: string): Promise<void> => {
+    await api.post(`/admin/transactions/${paymentId}/refund`, { reason });
+  },
 };
 
 export default paymentsApi;

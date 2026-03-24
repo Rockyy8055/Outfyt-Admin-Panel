@@ -48,14 +48,14 @@ import { format } from 'date-fns';
 import Link from 'next/link';
 
 const orderStatuses: OrderStatus[] = [
-  'pending',
-  'confirmed',
-  'preparing',
-  'ready',
-  'picked_up',
-  'in_transit',
-  'delivered',
-  'cancelled',
+  'PENDING',
+  'ACCEPTED',
+  'PACKING',
+  'READY',
+  'PICKED_UP',
+  'OUT_FOR_DELIVERY',
+  'DELIVERED',
+  'CANCELLED',
 ];
 
 interface PageProps {
@@ -206,21 +206,21 @@ export default function OrderDetailPage({ params }: PageProps) {
 
   const getTimelineIcon = (status: OrderStatus) => {
     switch (status) {
-      case 'pending':
+      case 'PENDING':
         return Clock;
-      case 'confirmed':
+      case 'ACCEPTED':
         return CheckCircle;
-      case 'preparing':
+      case 'PACKING':
         return Package;
-      case 'ready':
+      case 'READY':
         return Package;
-      case 'picked_up':
+      case 'PICKED_UP':
         return Bike;
-      case 'in_transit':
+      case 'OUT_FOR_DELIVERY':
         return Bike;
-      case 'delivered':
+      case 'DELIVERED':
         return CheckCircle;
-      case 'cancelled':
+      case 'CANCELLED':
         return XCircle;
       default:
         return Clock;
@@ -271,13 +271,13 @@ export default function OrderDetailPage({ params }: PageProps) {
           </div>
         </div>
         <div className="flex gap-2">
-          {order.status !== 'cancelled' && order.status !== 'delivered' && (
+          {order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && (
             <>
               <Button variant="outline" onClick={() => setShowCancelDialog(true)}>
                 <XCircle className="mr-2 h-4 w-4" />
                 Cancel Order
               </Button>
-              {order.paymentStatus === 'paid' && (
+              {order.paymentStatus === 'SUCCESS' && (
                 <Button variant="outline" onClick={() => setShowRefundDialog(true)}>
                   <RefreshCw className="mr-2 h-4 w-4" />
                   Refund
@@ -301,22 +301,22 @@ export default function OrderDetailPage({ params }: PageProps) {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {order.items.map((item) => (
+                {order.items?.map((item) => (
                   <div key={item.id} className="flex items-center gap-4">
                     <div className="h-16 w-16 rounded-lg bg-gray-100 flex items-center justify-center">
-                      {item.image ? (
-                        <img src={item.image} alt={item.name} className="h-full w-full object-cover rounded-lg" />
+                      {item.product?.images?.[0] ? (
+                        <img src={item.product.images[0]} alt={item.productName} className="h-full w-full object-cover rounded-lg" />
                       ) : (
                         <Package className="h-6 w-6 text-gray-400" />
                       )}
                     </div>
                     <div className="flex-1">
-                      <p className="font-medium">{item.name}</p>
+                      <p className="font-medium">{item.productName}</p>
                       <p className="text-sm text-gray-500">
-                        {formatCurrency(item.price)} x {item.quantity}
+                        {formatCurrency(item.unitPrice)} x {item.quantity}
                       </p>
                     </div>
-                    <p className="font-medium">{formatCurrency(item.total)}</p>
+                    <p className="font-medium">{formatCurrency(item.unitPrice * item.quantity)}</p>
                   </div>
                 ))}
               </div>
@@ -326,20 +326,20 @@ export default function OrderDetailPage({ params }: PageProps) {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Subtotal</span>
-                  <span>{formatCurrency(order.subtotal)}</span>
+                  <span>{formatCurrency(order.totalAmount)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Delivery Fee</span>
-                  <span>{formatCurrency(order.deliveryFee)}</span>
+                  <span>{formatCurrency(0)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Tax</span>
-                  <span>{formatCurrency(order.tax)}</span>
+                  <span>{formatCurrency(0)}</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total</span>
-                  <span>{formatCurrency(order.total)}</span>
+                  <span>{formatCurrency(order.totalAmount)}</span>
                 </div>
               </div>
             </CardContent>
@@ -354,13 +354,11 @@ export default function OrderDetailPage({ params }: PageProps) {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-700">{order.deliveryAddress.street}</p>
-              {order.deliveryAddress.landmark && (
-                <p className="text-gray-500">{order.deliveryAddress.landmark}</p>
+              {order.deliveryAddress ? (
+                <p className="text-gray-700">{order.deliveryAddress}</p>
+              ) : (
+                <p className="text-gray-500">No delivery address provided</p>
               )}
-              <p className="text-gray-500">
-                {order.deliveryAddress.city}, {order.deliveryAddress.state} - {order.deliveryAddress.pincode}
-              </p>
             </CardContent>
           </Card>
 
@@ -373,35 +371,24 @@ export default function OrderDetailPage({ params }: PageProps) {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-64">
-                <div className="space-y-4">
-                  {order.timeline.map((event, index) => {
-                    const Icon = getTimelineIcon(event.status);
-                    return (
-                      <div key={event.id} className="flex gap-4">
-                        <div className="flex flex-col items-center">
-                          <div className={`rounded-full p-2 ${
-                            index === 0 ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'
-                          }`}>
-                            <Icon className="h-4 w-4" />
-                          </div>
-                          {index < order.timeline.length - 1 && (
-                            <div className="h-full w-px bg-gray-200" />
-                          )}
-                        </div>
-                        <div className="pb-4">
-                          <p className="font-medium capitalize">{event.status.replace('_', ' ')}</p>
-                          <p className="text-sm text-gray-500">{event.description}</p>
-                          <p className="text-xs text-gray-400">
-                            {format(new Date(event.timestamp), 'PPp')}
-                            {event.actor && ` by ${event.actor}`}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
+              <div className="space-y-4">
+                <div className="flex gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className="rounded-full p-2 bg-blue-100 text-blue-600">
+                      {getTimelineIcon(order.status) && 
+                        (() => { const Icon = getTimelineIcon(order.status); return <Icon className="h-4 w-4" /> })()
+                      }
+                    </div>
+                  </div>
+                  <div className="pb-4">
+                    <p className="font-medium capitalize">{order.status.replace('_', ' ')}</p>
+                    <p className="text-sm text-gray-500">Current status</p>
+                    <p className="text-xs text-gray-400">
+                      {format(new Date(order.createdAt), 'PPp')}
+                    </p>
+                  </div>
                 </div>
-              </ScrollArea>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -421,7 +408,7 @@ export default function OrderDetailPage({ params }: PageProps) {
                 </Badge>
               </div>
 
-              {order.status !== 'cancelled' && order.status !== 'delivered' && (
+              {order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && (
                 <div className="space-y-2">
                   <Label>Update Status</Label>
                   <div className="flex gap-2">
@@ -470,18 +457,18 @@ export default function OrderDetailPage({ params }: PageProps) {
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
-                <p className="font-medium">{order.customerName}</p>
+                <p className="font-medium">{order.user?.name || 'N/A'}</p>
               </div>
               <div className="flex items-center gap-2 text-sm text-gray-500">
                 <Phone className="h-4 w-4" />
-                {order.customerPhone}
+                {order.user?.phone || 'N/A'}
               </div>
               <div className="flex items-center gap-2 text-sm text-gray-500">
                 <Mail className="h-4 w-4" />
-                {order.customerEmail}
+                {order.user?.email || 'N/A'}
               </div>
               <Link
-                href={`/admin/users/${order.customerId}`}
+                href={`/admin/users/${order.userId}`}
                 className="text-sm text-blue-600 hover:underline"
               >
                 View customer profile
@@ -498,7 +485,7 @@ export default function OrderDetailPage({ params }: PageProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="font-medium">{order.storeName}</p>
+              <p className="font-medium">{order.store?.name || 'N/A'}</p>
               <Link
                 href={`/admin/stores/${order.storeId}`}
                 className="text-sm text-blue-600 hover:underline"
@@ -517,9 +504,9 @@ export default function OrderDetailPage({ params }: PageProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {order.riderId && order.riderName ? (
+              {order.riderId && order.rider ? (
                 <>
-                  <p className="font-medium">{order.riderName}</p>
+                  <p className="font-medium">{order.rider.name || 'N/A'}</p>
                   <Link
                     href={`/admin/riders/${order.riderId}`}
                     className="text-sm text-blue-600 hover:underline"
@@ -530,7 +517,7 @@ export default function OrderDetailPage({ params }: PageProps) {
               ) : (
                 <>
                   <p className="text-gray-500">No rider assigned yet</p>
-                  {order.status !== 'cancelled' && order.status !== 'delivered' && (
+                  {order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && (
                     <Button
                       variant="outline"
                       className="w-full"
@@ -597,7 +584,7 @@ export default function OrderDetailPage({ params }: PageProps) {
                 className="flex h-10 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm"
                 value={refundAmount || ''}
                 onChange={(e) => setRefundAmount(e.target.value ? parseFloat(e.target.value) : null)}
-                placeholder={`Full refund: ${formatCurrency(order.total)}`}
+                placeholder={`Full refund: ${formatCurrency(order.totalAmount)}`}
               />
             </div>
             <div className="space-y-2">

@@ -39,6 +39,11 @@ export const storesApi = {
     return response.data.data;
   },
 
+  enable: async (id: string): Promise<Store> => {
+    const response = await api.put(`/admin/stores/${id}/approve`);
+    return response.data.data;
+  },
+
   getProducts: async (storeId: string, params?: PaginationParams): Promise<PaginatedResponse<Product>> => {
     const response = await api.get('/admin/products', { params: { ...params, storeId } });
     const res = response.data;

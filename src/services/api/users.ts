@@ -2,7 +2,7 @@ import api from './config';
 import type { User, PaginatedResponse, PaginationParams } from '@/types';
 
 export interface UsersQueryParams extends PaginationParams {
-  status?: 'active' | 'blocked';
+  isBlocked?: boolean;
   role?: string;
 }
 
