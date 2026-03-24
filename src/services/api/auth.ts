@@ -34,22 +34,16 @@ export const authApi = {
       setCookie('admin_token', token);
     }
 
-    // Fetch admin profile from backend
-    try {
-      const profile = await authApi.getProfile();
-      localStorage.setItem('admin_user', JSON.stringify(profile));
-      return { token, admin: profile };
-    } catch (err) {
-      // If profile fetch fails, still return with basic info
-      const admin: Admin = {
-        id: data.user?.id || '',
-        email: credentials.email,
-        name: data.user?.user_metadata?.name || credentials.email.split('@')[0],
-        role: 'admin',
-      };
-      localStorage.setItem('admin_user', JSON.stringify(admin));
-      return { token, admin };
-    }
+    // Use user data from Supabase - don't fetch profile which may fail
+    const admin: Admin = {
+      id: data.user?.id || '',
+      email: data.user?.email || credentials.email,
+      name: data.user?.user_metadata?.name || credentials.email.split('@')[0],
+      role: 'admin',
+    };
+    
+    localStorage.setItem('admin_user', JSON.stringify(admin));
+    return { token, admin };
   },
 
   logout: async (): Promise<void> => {
@@ -63,7 +57,7 @@ export const authApi = {
   },
 
   getProfile: async (): Promise<Admin> => {
-    const response = await api.get('/auth/me');
+    const response = await api.get('/me');
     return response.data;
   },
 
