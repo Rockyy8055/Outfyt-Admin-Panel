@@ -17,12 +17,14 @@ export const authApi = {
     const response = await api.post('/auth/admin/login', credentials);
     const data = response.data;
     // Store token in localStorage and cookie
-    if (typeof window !== 'undefined' && data.token) {
-      localStorage.setItem('admin_token', data.token);
+    // Backend returns 'accessToken', frontend uses 'token'
+    const token = data.accessToken || data.token;
+    if (typeof window !== 'undefined' && token) {
+      localStorage.setItem('admin_token', token);
       localStorage.setItem('admin_user', JSON.stringify(data.admin));
-      setCookie('admin_token', data.token);
+      setCookie('admin_token', token);
     }
-    return data;
+    return { ...data, token };
   },
 
   logout: async (): Promise<void> => {
