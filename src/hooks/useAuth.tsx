@@ -4,7 +4,6 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import { useRouter } from 'next/navigation';
 import type { Admin, LoginCredentials } from '@/types';
 import { authApi } from '@/services/api/auth';
-import { createClient } from '@/lib/supabase/client';
 
 interface AuthContextType {
   admin: Admin | null;
@@ -24,35 +23,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuth = useCallback(async () => {
     try {
-      const supabase = createClient();
-      
-      // Get Supabase session
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        console.log('[useAuth] No session found');
+      if (typeof window === 'undefined') {
+        return;
+      }
+
+      // Check localStorage for stored admin data
+      const storedToken = localStorage.getItem('admin_token');
+      const storedUser = localStorage.getItem('admin_user');
+
+      if (!storedToken || !storedUser) {
+        console.log('[useAuth] No stored credentials');
         setAdmin(null);
         return;
       }
 
-      console.log('[useAuth] Session found for:', session.user?.email);
-
-      // Store token in localStorage for API calls
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('admin_token', session.access_token);
-      }
-
-      // Use user data from Supabase session
-      const adminData: Admin = {
-        id: session.user?.id || '',
-        email: session.user?.email || '',
-        name: session.user?.user_metadata?.name || session.user?.email?.split('@')[0] || 'Admin',
-        role: 'admin',
-      };
-      
+      console.log('[useAuth] Found stored credentials');
+      const adminData = JSON.parse(storedUser);
       setAdmin(adminData);
-      localStorage.setItem('admin_user', JSON.stringify(adminData));
-      console.log('[useAuth] Admin set:', adminData.email);
     } catch (error) {
       console.error('[useAuth] Error:', error);
       setAdmin(null);
@@ -65,12 +52,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (credentials: LoginCredentials) => {
     console.log('[useAuth] Login called for:', credentials.email);
+    setIsLoading(true);
     const response = await authApi.login(credentials);
     console.log('[useAuth] Login response:', response);
     setAdmin(response.admin);
     setIsLoading(false);
-    router.push('/admin');
-  }, [router]);
+    // Use window.location for hard navigation to ensure state persists
+    window.location.href = '/admin';
+  }, []);
 
   const logout = useCallback(async () => {
     try {
@@ -79,6 +68,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Ignore logout errors
     } finally {
       setAdmin(null);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_user');
+      }
       router.push('/login');
     }
   }, [router]);

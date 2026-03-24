@@ -44,7 +44,8 @@ export default function LoginPage() {
         email: data.email,
         password: data.password,
       });
-      router.push('/admin');
+      // Use hard navigation to ensure localStorage is read fresh
+      window.location.href = '/admin';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred during login');
     } finally {
