@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
-import { authApi } from '@/services/supabase';
+import { authApi } from '@/services/api/auth';
 import Link from 'next/link';
 
 const loginSchema = z.object({

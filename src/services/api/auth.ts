@@ -3,26 +3,48 @@ import type { AuthResponse, LoginCredentials, Admin } from '@/types';
 
 export const authApi = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
-    const response = await api.post<AuthResponse>('/admin/auth/login', credentials);
-    return response.data;
+    const response = await api.post('/auth/admin/login', credentials);
+    const data = response.data;
+    // Store token in localStorage
+    if (typeof window !== 'undefined' && data.token) {
+      localStorage.setItem('admin_token', data.token);
+      localStorage.setItem('admin_user', JSON.stringify(data.admin));
+    }
+    return data;
   },
 
   logout: async (): Promise<void> => {
-    await api.post('/admin/auth/logout');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('admin_token');
+      localStorage.removeItem('admin_user');
+    }
   },
 
   getProfile: async (): Promise<Admin> => {
-    const response = await api.get<Admin>('/admin/auth/profile');
+    const response = await api.get('/auth/admin/profile');
     return response.data;
   },
 
   updateProfile: async (data: Partial<Admin>): Promise<Admin> => {
-    const response = await api.put<Admin>('/admin/auth/profile', data);
+    const response = await api.put('/auth/admin/profile', data);
     return response.data;
   },
 
   changePassword: async (data: { currentPassword: string; newPassword: string }): Promise<void> => {
-    await api.put('/admin/auth/password', data);
+    await api.post('/auth/admin/change-password', data);
+  },
+
+  forgotPassword: async (email: string): Promise<void> => {
+    await api.post('/auth/admin/forgot-password', { email });
+  },
+
+  resetPassword: async (token: string, password: string): Promise<void> => {
+    await api.post('/auth/admin/reset-password', { token, password });
+  },
+
+  signup: async (data: { email: string; password: string; name: string }): Promise<AuthResponse> => {
+    const response = await api.post('/auth/admin/signup', data);
+    return response.data;
   },
 };
 

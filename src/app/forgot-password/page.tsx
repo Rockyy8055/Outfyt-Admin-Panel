@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Eye, EyeOff, ArrowLeft, CheckCircle } from 'lucide-react';
-import { authApi } from '@/services/supabase';
+import { authApi } from '@/services/api/auth';
 import Link from 'next/link';
 
 const resetPasswordSchema = z.object({
@@ -46,7 +46,7 @@ export default function ForgotPasswordPage() {
     setError(null);
 
     try {
-      await authApi.resetPasswordDirect(data.email, data.newPassword);
+      await authApi.forgotPassword(data.email);
       setIsSuccess(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
