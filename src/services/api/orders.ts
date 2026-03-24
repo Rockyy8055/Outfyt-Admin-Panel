@@ -5,7 +5,7 @@ export interface OrdersQueryParams extends PaginationParams, OrderFilters {}
 
 export const ordersApi = {
   getAll: async (params: OrdersQueryParams): Promise<PaginatedResponse<Order>> => {
-    const response = await api.get('/admin/orders', { params });
+    const response = await api.get('/public/admin-orders', { params });
     const res = response.data;
     return {
       data: res.data || [],
@@ -42,7 +42,7 @@ export const ordersApi = {
   },
 
   getRecent: async (limit: number = 10): Promise<Order[]> => {
-    const response = await api.get('/admin/orders', { params: { limit } });
+    const response = await api.get('/public/admin-orders', { params: { limit } });
     return response.data.data || [];
   },
 };

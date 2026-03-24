@@ -8,7 +8,7 @@ export interface UsersQueryParams extends PaginationParams {
 
 export const usersApi = {
   getAll: async (params: UsersQueryParams): Promise<PaginatedResponse<User>> => {
-    const response = await api.get('/admin/users', { params });
+    const response = await api.get('/public/admin-users', { params });
     const res = response.data;
     return {
       data: res.data || [],

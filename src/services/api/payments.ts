@@ -10,7 +10,7 @@ export interface PaymentsQueryParams extends PaginationParams {
 
 export const paymentsApi = {
   getAll: async (params: PaymentsQueryParams): Promise<PaginatedResponse<Payment>> => {
-    const response = await api.get('/admin/transactions', { params });
+    const response = await api.get('/public/admin-transactions', { params });
     const res = response.data;
     return {
       data: res.data || [],
@@ -22,7 +22,7 @@ export const paymentsApi = {
   },
 
   getByOrderId: async (orderId: string): Promise<Payment[]> => {
-    const response = await api.get('/admin/transactions', { params: { orderId } });
+    const response = await api.get('/public/admin-transactions', { params: { orderId } });
     return response.data.data || [];
   },
 

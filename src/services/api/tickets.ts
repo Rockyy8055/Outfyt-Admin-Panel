@@ -5,7 +5,7 @@ export interface TicketsQueryParams extends PaginationParams, TicketFilters {}
 
 export const ticketsApi = {
   getAll: async (params: TicketsQueryParams): Promise<PaginatedResponse<Ticket>> => {
-    const response = await api.get('/admin/tickets', { params });
+    const response = await api.get('/public/admin-tickets', { params });
     const res = response.data;
     return {
       data: res.data || [],

@@ -7,7 +7,7 @@ export interface RidersQueryParams extends PaginationParams {
 
 export const ridersApi = {
   getAll: async (params: RidersQueryParams): Promise<PaginatedResponse<Rider>> => {
-    const response = await api.get('/admin/riders', { params });
+    const response = await api.get('/public/admin-riders', { params });
     const res = response.data;
     return {
       data: res.data || [],
@@ -39,7 +39,7 @@ export const ridersApi = {
   },
 
   getAvailable: async (): Promise<Rider[]> => {
-    const response = await api.get('/admin/riders', { params: { isBlocked: false } });
+    const response = await api.get('/public/admin-riders', { params: { isBlocked: false } });
     return response.data.data || [];
   },
 };

@@ -8,7 +8,7 @@ export interface StoresQueryParams extends PaginationParams {
 
 export const storesApi = {
   getAll: async (params: StoresQueryParams): Promise<PaginatedResponse<Store>> => {
-    const response = await api.get('/admin/stores', { params });
+    const response = await api.get('/public/admin-stores', { params });
     const res = response.data;
     return {
       data: res.data || [],
