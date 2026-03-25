@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { analyticsApi, ordersApi } from '@/services/api';
+import { analyticsApi } from '@/services/api';
 import type { DashboardStats, Order } from '@/types';
 import {
   Package,
@@ -37,7 +37,7 @@ export default function DashboardPage() {
       try {
         const [statsData, ordersData] = await Promise.all([
           analyticsApi.getDashboardStats(),
-          ordersApi.getRecent(10),
+          analyticsApi.getRecentOrders(10),
         ]);
         setStats(statsData);
         setRecentOrders(ordersData);
